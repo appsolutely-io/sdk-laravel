@@ -1,0 +1,17 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
+parameters:
+    level: max
+    paths:
+        - config
+        - src
+        - tests
+    tmpDir: build/phpstan
+    ignoreErrors:
+        # The rule knows only the application's config_path(). This file is
+        # the package's own configuration, merged into the application's
+        # when the config is loaded, which is where env() belongs.
+        - identifier: larastan.noEnvCallsOutsideOfConfig
+          path: config/appsolutely.php

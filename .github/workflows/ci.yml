@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Weekly, so a Laravel or dependency release or a new advisory that breaks
+  # the lowest or highest install shows up without waiting for the next change.
+  schedule:
+    - cron: '17 4 * * 1' # Mondays 04:17 UTC
+
+permissions:
+  contents: read
+
+# A newer push to a pull request supersedes its running build. A group
+# keeps at most one pending run and cancels an older pending one even
+# without cancel-in-progress, so a group per ref would drop a push to main
+# queued behind a running build. Pushes to main and scheduled runs
+# therefore get a group per event and commit: each runs to completion and
+# each merged commit has a result.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.ref) || format('ci-{0}-{1}', github.event_name, github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }}, Laravel ${{ matrix.laravel }} (${{ matrix.dependencies }} dependencies)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Every cell is installable: Laravel 12 and 13 both accept PHP 8.3
+      # to 8.5, so nothing is excluded.
+      matrix:
+        php: ['8.3', '8.4', '8.5']
+        laravel: ['12', '13']
+        dependencies: [lowest, highest]
+        include:
+          # Testbench's major selects the Laravel major; the floors are the
+          # first releases that accept the PHPUnit versions this package
+          # runs on.
+          - laravel: '12'
+            testbench: '^10.2'
+          - laravel: '13'
+            testbench: '^11.0'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Select Laravel ${{ matrix.laravel }}
+        run: composer require --dev --no-update --no-interaction "orchestra/testbench:${{ matrix.testbench }}"
+
+      - uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+        with:
+          dependency-versions: ${{ matrix.dependencies }}
+
+      - name: Audit dependencies
+        run: composer audit
+
+      # The coding style does not depend on the PHP or Laravel version or on
+      # the resolved dependencies, so it is checked once rather than in every
+      # cell, where an older fixer would report a different style.
+      - name: Coding style
+        if: matrix.php == '8.4' && matrix.laravel == '13' && matrix.dependencies == 'highest'
+        run: composer cs
+
+      - name: Static analysis
+        run: composer analyse
+
+      - name: Tests
+        run: composer test

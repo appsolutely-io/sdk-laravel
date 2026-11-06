@@ -1,0 +1,2 @@
+providers:
+  - Appsolutely\Sdk\Laravel\AppsolutelyServiceProvider
