@@ -31,6 +31,7 @@ final class InteractsWithAppsolutelyWebhooksTest extends TestCase
         'total_shown' => '$49.00',
         'updated_at' => '2026-10-13T10:00:00Z',
         'items' => [],
+        'attempts' => [],
     ];
 
     /** @var list<WebhookReceived> */

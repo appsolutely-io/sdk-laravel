@@ -5,7 +5,7 @@ The Laravel bridge for [`appsolutely/sdk-php`](https://github.com/appsolutely-io
 ## Requirements
 
 - PHP 8.3 or newer
-- a site running aio commit `c44982c39` (on aio's default branch after v0.43.0) or newer, the API documents `appsolutely/sdk-php` is held to
+- a site running aio commit `efbdc4df4` or newer, the API documents `appsolutely/sdk-php` is held to; this commit is untagged, described by the PHP SDK's existing pin convention as `v0.43.0-1843-gefbdc4df48ecc711109c5e565a4bfdc8182d5e12`
 - `appsolutely/sdk-php` from its `main` branch (`^0.1@dev`)
 - Laravel 12.69 or newer, or Laravel 13.30 or newer
 
@@ -120,6 +120,25 @@ To call the API as a signed-in member, pass the access token their sign-in retur
 ```php
 $me = Appsolutely::forMember($accessToken)->api()->me()->get();
 ```
+
+The adopted PHP SDK also provides public/member announcements, member inbox and message preferences, account deletion requests, order payment-method switching, REST realtime transport data, and backend member-message delivery through these same clients. Install the PHP SDK revision that adopts `efbdc4df4`; this bridge does not duplicate those resources or expand its selected typed Administrator API.
+
+```php
+$memberApi = Appsolutely::forMember($accessToken)->api();
+foreach ($memberApi->me()->messages()->list() as $page) {
+    foreach ($page->data as $message) {
+        // Use the message's title, body and reference.
+    }
+}
+
+$answer = $memberApi->me()->messages()->listConditional($etag);
+if (!$answer->notModified()) {
+    $page = $answer->value;
+    $etag = $answer->response->etag();
+}
+```
+
+Conditional reads are opt-in: a `304` retains response metadata and has a null value, so keep the cached value; ordinary reads retain their existing behavior. Profile, entitlements, organisations, inbox pages and realtime digest share this handling. The application owns storage of validators and cached values, and realtime connections and refetch scheduling.
 
 `backend()` calls the site as this application's backend, with a token its machine client is granted: kept in the configured cache until shortly before it expires, and asked for again once when the site no longer accepts it. A new token is asked for under `Cache::lock()` in the same store, so when it falls due, one process or worker asks while the rest wait for it rather than each asking at once; use a store whose locks reach every server that shares the token (Redis, Memcached, the database, DynamoDB); the file store locks within one host only.
 
