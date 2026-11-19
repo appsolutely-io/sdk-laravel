@@ -7,7 +7,12 @@ and this package adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-The first release is being prepared. It requires `appsolutely/sdk-php` from its `main` branch (`^0.1@dev`), the client held to aio commit `c44982c39` on aio's default branch, until that package's first release.
+The first release is being prepared. It requires `appsolutely/sdk-php` from its `main` branch (`^0.1@dev`), the client held to aio commit `efbdc4df4`, until that package's first release. The upstream commit is untagged; the PHP SDK records its existing `git describe` pin descriptor, `v0.43.0-1843-gefbdc4df48ecc711109c5e565a4bfdc8182d5e12`, without assigning a release version.
+
+### Compatibility
+
+- Use the PHP SDK revision adopting this contract to access announcements, member messages and preferences, deletion requests, order payment-method switching and REST realtime data through the facade. Existing unconditional reads remain unchanged; opt-in conditional reads return a result with a null value for `304` and retain response metadata.
+- The adopted PHP SDK corrects Administrator `FormEntry::data` from `?string` to object/array/null, represented by `?array` in PHP. Site `Order` response readers now require `attempts` and expose `paymentMethods` and `currentPayment`. Order responses and webhook payloads without `attempts` are rejected; upgrade sites that omit it before upgrading this bridge, and update custom response fixtures. Direct constructor calls retain their existing defaults. The bridge continues to use the PHP SDK's selected typed Administrator operations and `raw()` for other credential-accessible calls.
 
 ### Added
 
